@@ -28,6 +28,10 @@ static Builtin BUILT_IN[] = {
     {
         .cmd = "pwd",
         .fun = simple_pwd
+    },
+    {
+        .cmd = "wc",
+        .fun = simple_wc
     }
 };
 
@@ -37,9 +41,10 @@ int is_built_in(const char* cmd){
             return 1;
         }
     }
+    return 0;
 }
 
-int run_built_in(const SimpleCmd* cmd){
+void run_built_in(const SimpleCmd* cmd){
     for(size_t i = 0; i < sizeof(BUILT_IN) / sizeof(Builtin); ++i){
         if(!strcmp(BUILT_IN[i].cmd, cmd->words[0])){
             BUILT_IN[i].fun(cmd->n, cmd->words);
@@ -112,46 +117,42 @@ static void run_redir_cmd(const RedirCmd* cmd) {
 
 
 static void run_pipe_cmd(const PipeCmd* cmd) {
-    run_redir_cmd(cmd->redir);
-    // For now, simply fork and wait.
-    /*
-    pid_t pid = fork();
-    if (pid < 0) {
-        perror("Failed forking");
-        exit(-1);
-    }
-    
-    if (pid == 0) {
-        // Child.
-        run_redir_cmd(cmd->redir);
-        exit(0);
-    } else {
-        // Parent.
-        // Wait.
-        while (1) {
-            int status;
-            pid_t end = waitpid(pid, &status, WUNTRACED | WCONTINUED);
-            if (end == -1) {
-                perror("Failed waiting for child");
-                exit(-1);
+    printf("pipe\n");
+    if(cmd->next != NULL){
+        if(cmd->redir->rhs != NULL || cmd->next->redir->lhs != NULL){
+            pid_t t = fork();
+            if(t < 0){
+                fprintf(stderr, "failed to fork, %s\n", strerror(errno));
             }
-
-            if (WIFEXITED(status)) {
-                printf("exited, status = %d\n", WEXITSTATUS(status));
-            } else if (WIFSIGNALED(status)) {
-                printf("killed by signal %d\n", WTERMSIG(status));
-            } else if (WIFSTOPPED(status)) {
-                printf("stopped by signal %d\n", WSTOPSIG(status));
-            } else if (WIFCONTINUED(status)) {
-                printf("continued\n");
+            if(t == 0){
+                run_pipe_cmd(cmd->next);
             }
-
-            if (WIFEXITED(status) || WIFSIGNALED(status)) {
-                break;
+            else {
+                run_redir_cmd(cmd->redir);
+            }
+        }
+        else{
+            int pfds[2];
+            pipe(pfds);
+            pid_t pid = fork();
+            if(pid < 0){
+                fprintf(stderr, "failed to fork, %s\n", strerror(errno));
+            }
+            else if(pid == 0){
+                dup2(pfds[0], fileno(stdin));
+                close(pfds[0]);
+                run_pipe_cmd(cmd->next);
+            }
+            else{
+                dup2(pfds[1], fileno(stdout));
+                close(pfds[1]);
+                run_redir_cmd(cmd->redir);
             }
         }
     }
-    */
+    else{
+        run_redir_cmd(cmd->redir);
+    }
 }
 
 int run(const char* source) {
@@ -166,6 +167,7 @@ int run(const char* source) {
         print_cmd(cmd);
         printf("\n");
         if(is_built_in(cmd->redir->simple->words[0])){
+            printf("haha\n");
             run_pipe_cmd(cmd);
         }
         else{
@@ -206,7 +208,6 @@ int run(const char* source) {
                 }
             }
         }
-        run_pipe_cmd(cmd);
         delete_cmd(cmd);
         return USH_CONTINUE;
     }

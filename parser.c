@@ -268,12 +268,25 @@ void print_pipe_cmd(const PipeCmd* cmd) {
 /// 
 /// FOR NOW, PIPE-CMD IS JUST REDIR-CMD.
 static PipeCmd* parse_pipe_cmd(const Token** tokens) {
-    const Token* backup = *tokens;
+    
+    //const Token* pipe;
+    PipeCmd* pipe;
     RedirCmd* redir = parse_redir_cmd(tokens);
     if (redir == NULL) {
         return NULL;
     }
-    return make_pipe_cmd(redir);
+    else{
+        const Token* backup = *tokens;
+        if(expect(tokens, PIPE) != NULL && (pipe = parse_pipe_cmd(tokens)) != NULL) {
+            PipeCmd* head = make_pipe_cmd(redir);
+            head->next = pipe;
+            return head;
+        }
+        else{
+            *tokens = backup;
+            return make_pipe_cmd(redir);
+        }
+    }
 }
 
 

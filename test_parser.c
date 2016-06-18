@@ -20,9 +20,12 @@ int main() {
     driver("ls > out < in");
     driver("ls < in > out");
     driver("ls < in");
+    driver("ls | wc");
 
     // illegal test.
     driver("ls < in < in");
     driver("ls > <");
+    driver("| ls");
+    driver("ls | |");
     return 0;
 }
