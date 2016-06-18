@@ -2,7 +2,11 @@
 #include "ush.h"
 
 static const char* PATH[] = {
-    "/usr/bin"
+    "/usr/local/sbin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/sbin",
+    "/bin"
 };
 
 struct Builtin{
@@ -72,6 +76,28 @@ static void run_simple_cmd(const SimpleCmd* cmd) {
         if(is_built_in(cmd->words[0])){
             run_built_in(cmd);
         }
+        else{
+            // Search in the Path.
+            for (size_t i = 0; i < sizeof(PATH) / sizeof(char*); ++i) {
+
+                // Concat the path and the file.
+                char* concat = malloc(strlen(PATH[i]) + strlen(cmd->words[0]) + 2);
+                strcpy(concat, PATH[i]);
+                concat[strlen(PATH[i])] = '/';
+                strcpy(concat + strlen(PATH[i]) + 1, cmd->words[0]);
+
+                // Check if we can execute the file.
+                if (access(concat, F_OK | X_OK) < 0) {
+                    free(concat);
+                    continue;
+                } else {
+                    // Execute the command.
+                    execv(concat, cmd->words);
+                }
+            }
+            perror("Unknown command");
+            exit(-1);
+        }
     }
 }
 
@@ -88,6 +114,7 @@ static void run_redir_cmd(const RedirCmd* cmd) {
             exit(-1);
         }
         stdin_cpy = dup(0);
+        close(0);
         dup2(inf, 0);
     }
     if(cmd->rhs){
@@ -97,6 +124,7 @@ static void run_redir_cmd(const RedirCmd* cmd) {
             exit(-1);
         }
         stdout_cpy = dup(1);
+        close(1);
         dup2(ouf, 1);
     }
     run_simple_cmd(cmd->simple);
@@ -117,18 +145,27 @@ static void run_redir_cmd(const RedirCmd* cmd) {
 
 
 static void run_pipe_cmd(const PipeCmd* cmd) {
-    printf("pipe\n");
+    //printf("pipe\n");
     if(cmd->next != NULL){
         if(cmd->redir->rhs != NULL || cmd->next->redir->lhs != NULL){
-            pid_t t = fork();
-            if(t < 0){
+            // Check if either the stdout of the first command has been redirected
+            // or the stdin of the second command has been redirected.
+            pid_t pid = fork();
+            if(pid < 0){
                 fprintf(stderr, "failed to fork, %s\n", strerror(errno));
             }
-            if(t == 0){
+            if(pid == 0){
+                // Remember to close the stdin.
+                close(fileno(stdin));
                 run_pipe_cmd(cmd->next);
+                exit(0);
             }
             else {
                 run_redir_cmd(cmd->redir);
+
+                // Wait the child.
+                int status;
+                waitpid(pid, &status, WUNTRACED | WCONTINUED);
             }
         }
         else{
@@ -140,13 +177,25 @@ static void run_pipe_cmd(const PipeCmd* cmd) {
             }
             else if(pid == 0){
                 dup2(pfds[0], fileno(stdin));
-                close(pfds[0]);
+                close(pfds[1]);
                 run_pipe_cmd(cmd->next);
+                exit(0);
             }
             else{
+                int stdout_cpy = dup(fileno(stdout));
+
                 dup2(pfds[1], fileno(stdout));
-                close(pfds[1]);
+                close(pfds[0]);
+
                 run_redir_cmd(cmd->redir);
+
+                dup2(stdout_cpy, fileno(stdout));
+                close(pfds[1]);
+                close(stdout_cpy);
+
+                // Wait the child.
+                int status;
+                waitpid(pid, &status, WUNTRACED | WCONTINUED);
             }
         }
     }
@@ -167,7 +216,7 @@ int run(const char* source) {
         print_cmd(cmd);
         printf("\n");
         if(is_built_in(cmd->redir->simple->words[0])){
-            printf("haha\n");
+            //printf("haha\n");
             run_pipe_cmd(cmd);
         }
         else{

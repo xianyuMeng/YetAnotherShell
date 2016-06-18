@@ -35,7 +35,6 @@ void simple_pwd(size_t n, char** words){
 
 void simple_cd(size_t n, char** words){
 	char cwd[1024];
-	fprintf(stderr, "this is simple cmd");
 	if(getcwd(cwd, 1024) == NULL){
 		fprintf(stderr, "%s\n", strerror(errno));
 		exit(-1);
@@ -50,7 +49,6 @@ void simple_cd(size_t n, char** words){
 		else{
 			strcat(cwd, "/");
 			strcat(cwd, words[1]);
-			fprintf(stdout, "the arg is %s\n", cwd);
 			if(chdir(cwd) == -1){
 				fprintf(stderr, "%s\n", strerror(errno));
 				exit(-1);
