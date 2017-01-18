@@ -1,25 +1,25 @@
 # YetAnotherShell
 ####Lexer
 
-#Infinite state machine
+  Infinite state machine
 
-#Initial, Running, Succeed, Failed
+  Initial, Running, Succeed, Failed
 
-#Tokens
+  Tokens
 
-  PARENTL (
+    PARENTL (
   
-  PARENTR )
+    PARENTR )
   
-  LT <
+    LT <
   
-  RT >
+    RT >
   
-  PIPE |
+    PIPE |
   
-  BACKGROUND &
+    BACKGROUND &
   
-  \n \t ' ' /*blank*/
+    \n \t ' ' /*blank*/
 ####Parser
  
  Recursive descent
