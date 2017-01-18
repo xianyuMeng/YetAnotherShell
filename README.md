@@ -1,53 +1,53 @@
 # YetAnotherShell
 ####Lexer
 
--Infinite state machine
+#Infinite state machine
 
--Initial, Running, Succeed, Failed
+#Initial, Running, Succeed, Failed
 
--Tokens
+#Tokens
 
-  -PARENTL (
+  PARENTL (
   
-  -PARENTR )
+  PARENTR )
   
-  -LT <
+  LT <
   
-  -RT >
+  RT >
   
-  -PIPE |
+  PIPE |
   
-  -BACKGROUND &
+  BACKGROUND &
   
-  -\n \t ' ' /*blank*/
+  \n \t ' ' /*blank*/
 ####Parser
  
- -Recursive descent
+ Recursive descent
  
- -Grammer
+ Grammer
   
-  -Simple cmd
+  Simple cmd
     
-    -;word-list
+    ;word-list
     
-    -;
+    ;
   
-  -Redir cmd
+  Redir cmd
     
-    -: simple-cmd RT WORD LT WORD
+    : simple-cmd RT WORD LT WORD
     
-    -| simple-cmd LT WORD RT WORD
+    | simple-cmd LT WORD RT WORD
     
-    -| simple-cmd LT WORD
+    | simple-cmd LT WORD
     
-    -| simple-cmd RT WORD
+    | simple-cmd RT WORD
     
-    -| simple-cmd
+    | simple-cmd
     
-    -;
+    ;
   
-  -Pipe cmd
+  Pipe cmd
     
-    -: redir-cmd
+    : redir-cmd
     
-    -| redir-cmd PIPE pipe-cmd
+    | redir-cmd PIPE pipe-cmd
